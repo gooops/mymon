@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -270,13 +271,16 @@ func main() {
 	log.Info("MySQL Monitor for falcon")
 	// fmt.Println(cfg)
 	go timeout()
-
+	var wg sync.WaitGroup
 	for key, mysqlins := range cfg.MysqlIns {
-		go func() {
+		wg.Add(1)
+		go func(wg *sync.WaitGroup) {
+			defer wg.Done()
 			err := FetchData(&mysqlins)
 			if err != nil {
 				log.Error(key, err)
 			}
-		}()
+		}(&wg)
 	}
+	wg.Wait()
 }

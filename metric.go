@@ -234,9 +234,13 @@ var DataType = map[string]string{
 }
 
 type MysqlIns struct {
-	Host string
-	Port int
-	Tag  string
+	User   string
+	Pass   string
+	Host   string
+	Port   int
+	Socket string
+	Flag   string
+	Tag    string
 }
 
 func dataType(key_ string) string {
@@ -262,12 +266,12 @@ func (m *MetaData) String() string {
 	return s
 }
 
-func NewMetric(name string) *MetaData {
+func NewMetric(name string,m *MysqlIns) *MetaData {
 	return &MetaData{
 		Metric:      name,
 		Endpoint:    hostname(),
 		CounterType: dataType(name),
-		Tags:        fmt.Sprintf("port=%d", cfg.Port),
+		Tags:        fmt.Sprintf("port=%d", m.Port),
 		Timestamp:   time.Now().Unix(),
 		Step:        60,
 	}
@@ -280,7 +284,8 @@ func hostname() string {
 	}
 	host, err := os.Hostname()
 	if err != nil {
-		host = cfg.Host
+		// host = cfg.Host
+		host = localip.String()
 	}
 	return host
 }

@@ -29,7 +29,7 @@ func mysqlState(m *MysqlIns, db mysql.Conn, sql string) ([]*MetaData, error) {
 			continue
 		}
 
-		data[i] = NewMetric(key_)
+		data[i] = NewMetric(key_, m)
 		data[i].SetValue(v)
 		i++
 	}

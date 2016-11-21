@@ -273,10 +273,12 @@ func main() {
 	go timeout()
 	var wg sync.WaitGroup
 	for key, mysqlins := range cfg.MysqlIns {
+		ins := MysqlIns{}
+		ins = mysqlins
 		wg.Add(1)
 		go func(wg *sync.WaitGroup) {
 			defer wg.Done()
-			err := FetchData(&mysqlins)
+			err := FetchData(&ins)
 			if err != nil {
 				log.Error(key, err)
 			}

@@ -37,11 +37,20 @@ echo '* * * * * cd $GOPATH/src/github.com/open-falcon/mymon && ./mymon -c etc/mo
     #自定义endpoint
     endpoint=127.0.0.1 #若不设置则使用OS的hostname
 
-    [mysql]
+    #自动扫描多实例
+    mycnf = /usr/local/mysql/my.cnf
+
+    [mysqld]
     user=root # 数据库用户名
     password= # 数据库密码
     host=127.0.0.1 # 数据库连接地址
     port=3306 # 数据库端口
+
+    #[mysqld3060]
+    #user=root
+    #password=123456
+    #host=127.0.0.1
+    #port=3060
 ```
 
 ## MySQL metrics

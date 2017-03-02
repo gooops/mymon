@@ -266,7 +266,8 @@ func (m *MetaData) String() string {
 	return s
 }
 
-func NewMetric(name string,m *MysqlIns) *MetaData {
+// name 以 CustomData_ 开始表示非标准监控数据
+func NewMetric(name string, m *MysqlIns) *MetaData {
 	return &MetaData{
 		Metric:      name,
 		Endpoint:    hostname(),

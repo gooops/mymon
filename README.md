@@ -51,6 +51,12 @@ echo '* * * * * cd $GOPATH/src/github.com/open-falcon/mymon && ./mymon -c etc/mo
     #password=123456
     #host=127.0.0.1
     #port=3060
+
+    # 往kafka发送 show processlist 消息
+    # {"server":"127.0.0.1:3060","processlist":[{"COMMAND":"Sleep","DB":"test","HOST":"10.10.10.10:51811","ID":"68893","INFO":"","STATE":"","TIME":"1","USER":"root"}]}
+    [kafka]
+    brokers = 10.10.10.10:9092
+    topic=test
 ```
 
 ## MySQL metrics

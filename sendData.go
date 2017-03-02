@@ -10,7 +10,6 @@ import (
 )
 
 func sendData(data []*MetaData) ([]byte, error) {
-
 	js, err := json.Marshal(data)
 	if err != nil {
 		return nil, err

@@ -26,6 +26,8 @@ type Cfg struct {
 	FalconClient string
 	Endpoint     string
 	MyCnf        string
+	KafkaBrokers string
+	KafkaTopic   string
 	MyDef        MysqlIns
 	MysqlIns     map[string]MysqlIns
 }
@@ -126,6 +128,13 @@ func (conf *Cfg) readConf(file string) error {
 
 	conf.MyCnf = section.Key("mycnf").String()
 
+	kafka, err := c.GetSection("kafka")
+	if err != nil {
+		return err
+	}
+	conf.KafkaBrokers = kafka.Key("brokers").String()
+	conf.KafkaTopic = kafka.Key("topic").String()
+
 	// 读取默认配置
 	mysqlsection, err := c.GetSection("mysqld")
 	if err != nil {
@@ -143,28 +152,39 @@ func (conf *Cfg) readConf(file string) error {
 	if err != nil {
 		return err
 	}
+
+	sections := c.Sections()
+
 	instancecfgs, err := ini.LoadSources(ini.LoadOptions{AllowBooleanKeys: true, IgnoreContinuation: true}, conf.MyCnf)
-	if err != nil {
-		return err
+	if err == nil {
+		sections = append(sections, instancecfgs.Sections()...)
 	}
-	sections := instancecfgs.Sections()
+
 	instances := make([]string, 0, 4)
-	instancereg := regexp.MustCompile(`(mysqld)([0-9]+)?$`)
+	instancereg := regexp.MustCompile(`(mysqld)([0-9])([0-9]+)?$`)
 	for _, v := range sections {
 		if instancereg.MatchString(v.Name()) {
 			instances = append(instances[:], v.Name())
 		}
 	}
+
 	var m = map[string]MysqlIns{}
+
 	for _, v := range instances {
-		// fmt.Println(v)
-		section, err := instancecfgs.GetSection(v)
-		if err != nil {
-			// fmt.Println(err)
-			return err
+		var (
+			section      *ini.Section
+			socket, port *ini.Key
+		)
+
+		if instancecfgs != nil {
+			section, err = instancecfgs.GetSection(v)
+			if err != nil {
+				return err
+			}
+			socket, err = section.GetKey("socket")
+			port, err = section.GetKey("port")
 		}
-		socket, err := section.GetKey("socket")
-		port, err := section.GetKey("port")
+
 		// 读取实例的配置（mon.cfg）中为每实例配置的参数，如果没有，则用默认配置
 		var mycfg = MysqlIns{Flag: "host"}
 		mysqlsection, err := c.GetSection(v)
@@ -189,7 +209,7 @@ func (conf *Cfg) readConf(file string) error {
 		// fmt.Println(conf)
 	}
 	conf.MysqlIns = m
-	return err
+	return nil
 }
 
 func timeout() {
@@ -231,6 +251,9 @@ func FetchData(m *MysqlIns) (err error) {
 	defer db.Close()
 
 	data := make([]*MetaData, 0)
+	// 自定义数据的结果集
+	customData := make([]*MetaData, 0)
+
 	globalStatus, err := GlobalStatus(m, db)
 	if err != nil {
 		return
@@ -255,6 +278,20 @@ func FetchData(m *MysqlIns) (err error) {
 	}
 	data = append(data, slaveState...)
 
+	// 搜集 processlist
+	processState, err := processList(m, db)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	customData = append(customData, processState...)
+
+	// 发送自定义的数据
+	err = sendCustomData(customData)
+	if err != nil {
+		log.Error("sendCustomData Error:", err)
+	}
+
 	msg, err := sendData(data)
 	if err != nil {
 		return
@@ -269,10 +306,10 @@ func (m *MysqlIns) String() string {
 
 func main() {
 	log.Info("MySQL Monitor for falcon")
-	// fmt.Println(cfg)
 	go timeout()
 	var wg sync.WaitGroup
 	for key, mysqlins := range cfg.MysqlIns {
+
 		ins := MysqlIns{}
 		ins = mysqlins
 		wg.Add(1)

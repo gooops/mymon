@@ -13,6 +13,9 @@ import (
 )
 
 func sendCustomData(data []*MetaData) error {
+	if cfg.KafkaBrokers == "" {
+		return nil
+	}
 	for _, d := range data {
 		switch d.Metric {
 		case "CustomData_Process_List":
@@ -28,7 +31,7 @@ func sendCustomData(data []*MetaData) error {
 				return err
 			}
 			partition, offset, err := kafkaProducer().SendMessage(&sarama.ProducerMessage{
-				Topic: conf.KafkaTopic,
+				Topic: cfg.KafkaTopic,
 				Value: sarama.ByteEncoder(js),
 			})
 			fmt.Println(partition, offset, err)
@@ -36,7 +39,7 @@ func sendCustomData(data []*MetaData) error {
 			return errors.New("不支持")
 		}
 	}
-	return errors.New("bbbb")
+	return nil
 }
 
 func kafkaProducer() sarama.SyncProducer {
